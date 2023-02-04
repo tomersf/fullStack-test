@@ -15,7 +15,7 @@ let phonebook: Person[] = JSON.parse(
 );
 
 app.use(express.json());
-app.use(express.static("../build"));
+app.use(express.static("build"));
 
 morgan.token("body", (req: any) => {
   if (Object.keys(req.body).length == 0) return "";
