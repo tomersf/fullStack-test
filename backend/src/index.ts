@@ -1,71 +1,44 @@
 import express from "express";
-import morgan from "morgan";
-import { readFile, readFileSync } from "fs";
-import path from "path";
+import "express-async-errors";
+import rateLimiter from "express-rate-limit";
+import { config } from "dotenv";
+import connectDB from "./db/connect";
+import {
+  morganMiddleware,
+  notFoundMiddleware,
+  errorHandlerMiddleware,
+} from "./middlewares";
+import { personsRouter } from "./routes";
 
-type Person = {
-  id: number;
-  name: string;
-  number: string;
-};
+config();
 const app = express();
-
-let phonebook: Person[] = JSON.parse(
-  readFileSync(path.join(__dirname, "db.json"), { encoding: "utf-8" })
+app.use(
+  rateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+  })
 );
 
 app.use(express.json());
 app.use(express.static("build"));
+app.use(morganMiddleware);
 
-morgan.token("body", (req: any) => {
-  if (Object.keys(req.body).length == 0) return "";
-  return JSON.stringify(req.body);
-});
+app.use("/api/persons", personsRouter);
 
-app.use(morgan(":method :url :status :body - :response-time ms"));
+app.use(notFoundMiddleware);
+app.use(errorHandlerMiddleware);
 
-app.get("/api/persons", (req, res) => {
-  res.status(200).send(phonebook);
-});
+const port = process.env.PORT || 3001;
 
-app.post("/api/persons", (req, res) => {
-  const person = req.body as Partial<Person>;
-  if (!person.name || !person.number)
-    return res.status(401).end("Make sure there is name and number");
+const start = async () => {
+  try {
+    await connectDB(process.env.MONGO_URI);
+    app.listen(port, () =>
+      console.log(`Server is listening on port ${port}...`)
+    );
+  } catch (error) {
+    console.error(error);
+  }
+};
 
-  if (phonebook.find((personObj) => personObj.name === person.name))
-    return res.status(401).json({ error: "name must be unique" });
-
-  person.id = Math.max(...phonebook.map((person) => person.id)) + 1;
-  phonebook.push(person as Person);
-  res.status(200).send("success");
-});
-
-app.get("/api/persons/:id", (req, res) => {
-  const id = req.params.id;
-  const person = phonebook.find((person) => person.id === Number(id));
-  if (!person) return res.status(404).end("Unable to find person");
-
-  return res.status(200).json(person);
-});
-
-app.delete("/api/persons/:id", (req, res) => {
-  const id = req.params.id;
-  const person = phonebook.find((person) => person.id === Number(id));
-  if (!person) return res.status(404).end("Unable to find person");
-
-  phonebook = phonebook.filter((person) => person.id !== Number(id));
-  return res.status(204).send("Person was deleted");
-});
-
-app.get("/info", (req, res) => {
-  const msg = `Phonebook has info for ${phonebook.length} people,
-  Current date is: ${new Date().toUTCString()}`;
-  res.status(200).send(msg);
-});
-
-app.use((req, res) => res.status(404).json({ error: "unknown endpoint" }));
-
-app.listen(process.env.PORT || 3001, () => {
-  console.log("listening on port 3001...");
-});
+start();
