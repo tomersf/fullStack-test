@@ -1,6 +1,6 @@
 
 type Person = {
-  id: number;
+  id:number
   name: string;
   number: string;
 };

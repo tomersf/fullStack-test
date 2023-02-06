@@ -1,7 +1,6 @@
 import express from "express";
 import "express-async-errors";
 import rateLimiter from "express-rate-limit";
-import { config } from "dotenv";
 import connectDB from "./db/connect";
 import {
   morganMiddleware,
@@ -9,8 +8,8 @@ import {
   errorHandlerMiddleware,
 } from "./middlewares";
 import { personsRouter } from "./routes";
+import config from "./config";
 
-config();
 const app = express();
 app.use(
   rateLimiter({
@@ -28,11 +27,11 @@ app.use("/api/persons", personsRouter);
 app.use(notFoundMiddleware);
 app.use(errorHandlerMiddleware);
 
-const port = process.env.PORT || 3001;
+const port = config.PORT
 
 const start = async () => {
   try {
-    await connectDB(process.env.MONGO_URI);
+    await connectDB(config.MONGODB_URI);
     app.listen(port, () =>
       console.log(`Server is listening on port ${port}...`)
     );
@@ -42,3 +41,5 @@ const start = async () => {
 };
 
 start();
+
+export default app

@@ -11,7 +11,7 @@ const getAllPersons = async (req: Request, res: Response) => {
 };
 
 const addPerson = async (req: Request, res: Response) => {
-  const person = req.body as Partial<Person>;
+  const person = req.body as Person;
   if (!person.name || !person.number)
     throw new BadRequestError("Please provide name and email");
 
@@ -34,7 +34,7 @@ const deletePerson = async (req: Request, res: Response) => {
   const id = req.params.id;
   const person = await ModelPerson.findByIdAndRemove({_id: id})
   if (!person) throw new NotFoundError("Unable to find person");
-  return res.status(StatusCodes.OK).send();
+  return res.status(StatusCodes.NO_CONTENT).send();
 };
 
 export { getAllPersons, getPerson, deletePerson, addPerson };
